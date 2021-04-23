@@ -5,6 +5,7 @@ import com.lambdaschool.bookstore.services.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -19,7 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
     value = "enabled",
     havingValue = "true",
     matchIfMissing = true)
-//@Component
+@Component
 public class SeedData
         implements CommandLineRunner
 {
