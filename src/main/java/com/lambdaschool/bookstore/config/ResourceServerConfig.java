@@ -1,11 +1,17 @@
 package com.lambdaschool.bookstore.config;
 
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.oauth2.config.annotation.web.configuration.EnableResourceServer;
 import org.springframework.security.oauth2.config.annotation.web.configuration.ResourceServerConfigurerAdapter;
 import org.springframework.security.oauth2.config.annotation.web.configurers.ResourceServerSecurityConfigurer;
 import org.springframework.security.oauth2.provider.error.OAuth2AccessDeniedHandler;
+
+/**
+ * Once the client has gained authorization, users need to gain authentication. This class is response for handling that.
+ * It also configures which roles have access to which endpoints. So controls the users' access!
+ */
 
 /**
  * Once the client has gained authorization, users need to gain authentication. This class is response for handling that.
@@ -44,21 +50,29 @@ public class ResourceServerConfig
         // hasAnyRole = must be authenticated and be assigned this role!
         http.authorizeRequests()
                 .antMatchers("/",
-                             "/h2-console/**",
-                             "/swagger-resources/**",
-                             "/swagger-resource/**",
-                             "/swagger-ui.html",
-                             "/v2/api-docs",
-                             "/webjars/**",
-                             "/createnewuser")
+                        "/h2-console/**",
+                        "/swagger-resources/**",
+                        "/swagger-resource/**",
+                        "/swagger-ui.html",
+                        "/v2/api-docs",
+                        "/webjars/**",
+                        "/createnewuser")
                 .permitAll()
                 .antMatchers("/users/**",
-                             "/useremails/**",
-                             "/oauth/revoke-token",
-                             "/logout")
+                        "/useremails/**",
+                        "/oauth/revoke-token",
+                        "/logout")
                 .authenticated()
                 .antMatchers("/roles/**")
                 .hasAnyRole("ADMIN", "DATA")
+                .antMatchers("/books/books","/books/book/**")
+                .hasAnyRole("ADMIN","USER","DATA")
+                .antMatchers(HttpMethod.POST,"/books/book")
+                .hasAnyRole("ADMIM")
+                .antMatchers(HttpMethod.PUT,"books/book/**")
+                .hasAnyRole("ADMIN")
+                .antMatchers(HttpMethod.DELETE,"/books/book/**")
+                .hasAnyRole("ADMIN")
                 .anyRequest().denyAll()
                 .and()
                 .exceptionHandling()
@@ -89,3 +103,4 @@ public class ResourceServerConfig
                 .disable();
     }
 }
+

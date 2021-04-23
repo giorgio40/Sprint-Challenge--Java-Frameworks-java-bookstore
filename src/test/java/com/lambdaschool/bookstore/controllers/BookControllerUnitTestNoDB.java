@@ -1,5 +1,7 @@
 package com.lambdaschool.bookstore.controllers;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lambdaschool.bookstore.BookstoreApplicationTest;
 import com.lambdaschool.bookstore.models.Author;
 import com.lambdaschool.bookstore.models.Book;
@@ -11,22 +13,34 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.RequestBuilder;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+import org.springframework.test.web.servlet.result.MockMvcResultHandlers;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.junit.Assert.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 @RunWith(SpringRunner.class)
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, classes = BookstoreApplicationTest.class)
+@WithMockUser(username = "admin",
+        roles = {"USER", "ADMIN"})
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, classes = BookstoreApplicationTest.class,properties = "command.line.runner.enabled=false")
 @AutoConfigureMockMvc
 public class BookControllerUnitTestNoDB
 {
@@ -124,34 +138,136 @@ public class BookControllerUnitTestNoDB
     public void listAllBooks() throws
             Exception
     {
+        String apiUrl = "/books/books";
+        Mockito.when(bookService.findAll())
+                .thenReturn(myBookList);
+        RequestBuilder rb = MockMvcRequestBuilders.get(apiUrl)
+                .accept(MediaType.APPLICATION_JSON);
+        MvcResult r = mockMvc.perform(rb)
+                .andReturn();
+        String tr = r.getResponse()
+                .getContentAsString();
+        ObjectMapper mapper = new ObjectMapper();
+        String er = mapper.writeValueAsString(myBookList);
+        assertEquals(er,
+                tr);
     }
 
     @Test
     public void getBookById() throws
             Exception
     {
+        String apiUrl = "/books/book/10";
+        Mockito.when(bookService.findBookById(10))
+                .thenReturn(myBookList.get(0));
+
+        RequestBuilder rb = MockMvcRequestBuilders.get(apiUrl)
+                .accept(MediaType.APPLICATION_JSON);
+        MvcResult r = mockMvc.perform(rb)
+                .andReturn();
+        String tr = r.getResponse()
+                .getContentAsString();
+
+        ObjectMapper mapper = new ObjectMapper();
+        String er = mapper.writeValueAsString(myBookList.get(0));
+
+        assertEquals(er,
+                tr);
     }
 
     @Test
     public void getNoBookById() throws
             Exception
     {
+
+        String apiUrl = "/books/book/100";
+        Mockito.when(bookService.findBookById(100))
+                .thenReturn(null);
+
+        RequestBuilder rb = MockMvcRequestBuilders.get(apiUrl)
+                .accept(MediaType.APPLICATION_JSON);
+        MvcResult r = mockMvc.perform(rb)
+                .andReturn();
+        String tr = r.getResponse()
+                .getContentAsString();
+
+        String er = "";
+        assertEquals(er,
+                tr);
     }
 
     @Test
     public void addNewBook() throws
             Exception
     {
+        String apiUrl = "/books/book";
+
+        Section s1 = new Section("Programming");
+        s1.setSectionid(30);
+
+        Author a1 = new Author("John", "Mitchell");
+        a1.setAuthorid(1);
+        Book b2 = new Book("Coding with Java", "9788489367012", 2007, s1);
+
+        b2.getWrotes()
+                .add(new Wrote(a1, b2));
+        b2.setSection(s1);
+        ObjectMapper mapper = new ObjectMapper();
+        String bookString = mapper.writeValueAsString(b2);
+        Mockito.when(bookService.save(any(Book.class)))
+                .thenReturn(b2);
+
+        RequestBuilder rb = MockMvcRequestBuilders.post(apiUrl)
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(bookString);
+
+        mockMvc.perform(rb)
+                .andExpect(status().isCreated())
+                .andDo(MockMvcResultHandlers.print());
     }
 
     @Test
-    public void updateFullBook()
-    {
+    public void updateFullBook() throws Exception {
+        String apiUrl = "/books/book/{id}";
+        String book2Name = "The Godfather";
+        Section s1 = new Section("Drama");
+        Book b2 = new Book(book2Name,"0987764332",43,s1);
+        Author a1 = new Author("Mario","Puzzo");
+        a1.setAuthorid(100);
+        s1.setSectionid(10);
+        b2.setBookid(100);
+
+        b2.getWrotes()
+                .add(new Wrote(a1, b2));
+        Mockito.when(bookService.update(b2,100))
+                .thenReturn(b2);
+        ObjectMapper mapper = new ObjectMapper();
+        String bookString = mapper.writeValueAsString(b2);
+
+        RequestBuilder rb = MockMvcRequestBuilders.put(apiUrl,100)
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.APPLICATION_JSON)
+                .content(bookString);
+        mockMvc.perform(rb)
+                .andExpect(status().isOk())
+                .andDo(MockMvcResultHandlers.print());
     }
 
     @Test
     public void deleteBookById() throws
             Exception
     {
+        String apiUrl = "/books/book/{id}";
+        RequestBuilder rb = MockMvcRequestBuilders.delete(apiUrl,"4")
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.APPLICATION_JSON);
+
+        mockMvc.perform(rb)
+                .andExpect(status().isOk())
+                .andDo(MockMvcResultHandlers.print());
+
+
+
     }
 }
